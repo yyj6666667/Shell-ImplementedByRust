@@ -8,7 +8,7 @@
 
     fn main() {
         // TODO: Uncomment the code below to pass the first stage
-        let builtins = ["echo", "exit", "type", "pwd"]; // 注意这里的元素类型是&str
+        let builtins = ["echo", "exit", "type", "pwd", "cd"]; // 注意这里的元素类型是&str
                                                             // 调用contains 传入&&str
 
         loop {
@@ -26,6 +26,27 @@
             }
             "pwd" => {
                 println!("{}", env::current_dir().unwrap().display());
+            }
+            //cd
+            _ if command.starts_with("cd ") => {
+                let target = if command.len() > 3 {
+                    &command[3..]
+                } else {
+                    "~"
+                };
+                // dealing with ~
+                let path = if target == "~" {
+                    env::var("HOME").unwrap()
+                } else if target.starts_with("~/") {
+                    let home = env::var("HOME").unwrap();
+                    format!("{}{}", home, &target[1..])
+                } else {
+                    target.to_string()
+                };
+
+                if env::set_current_dir(&path).is_err() {
+                    println!("cd: {}: No such file or directory", &path);
+                }
             }
             //echo
             _ if command.starts_with("echo ") => {
