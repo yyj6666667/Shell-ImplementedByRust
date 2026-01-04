@@ -24,6 +24,8 @@ fn main() {
             let arg = &command[5..];
             if builtins.contains(&arg) { 
                 println!("{} is a shell builtin", arg);
+            } else {
+                println!("{}: not found", arg);
             }
         }
         _   => println!("{}: command not found", command),
