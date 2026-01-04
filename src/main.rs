@@ -55,7 +55,7 @@ fn main() {
 
             let args = &parts[1..];
             if let Some(found) = find_exec_in_path(&parts[0]) {
-                Command::new(&found).args(args).exec();
+                Command::new(&found).args(args).status().unwrap();
             } else {
                 println!("{}: command not found", command);
             }      
