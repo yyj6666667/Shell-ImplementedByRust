@@ -1,8 +1,10 @@
 #[allow(unused_imports)]
 use std::env;
 use std::os::unix::fs::PermissionsExt;
+use std::os::unix::process::CommandExt;
 use std::path::Path;
 use std::io::{self, Write};
+use std::process::Command;
 
 fn main() {
     // TODO: Uncomment the code below to pass the first stage
@@ -19,19 +21,23 @@ fn main() {
       //.trim() 去\n, 转成&str
       let command = command.trim();
       match command {
-        "exit" => break,
+        "exit" => {
+            break;
+        }
+        //echo
         _ if command.starts_with("echo ") => {
             println!("{}", &command[5..]);
         }
+        //type
         _ if command.starts_with("type") && command.len() > 4 => {
             let arg = &command[5..];
             if builtins.contains(&arg) { 
                 println!("{} is a shell builtin", arg);
-            } else if (find_in_path(arg).is_some())  {
+            } else if (find_exec_in_path(arg).is_some())  {
                 // is_some(), is_none, 学到了
                 // 可以用if let 语法写， 但是这里不整复杂了
                 // unwarp() 解包 Option<>
-                let path = find_in_path(arg).unwrap();
+                let path = find_exec_in_path(arg).unwrap();
                 println!("{} is {}", arg, path);
             }
             
@@ -39,7 +45,21 @@ fn main() {
                 println!("{}: not found", arg);
             }
         }
-        _   => println!("{}: command not found", command),
+        //not built-in command
+        //maybe an exec or wrong
+        _ => {
+            //check if is an exec
+            // 唉， 这里开销有点大
+            let parts: Vec<&str> = command.split_whitespace().collect();
+            if parts.is_empty() { continue; }
+
+            let args = &parts[1..];
+            if let Some(found) = find_exec_in_path(&parts[0]) {
+                Command::new(&found).args(args).exec();
+            } else {
+                println!("{}: command not found", command);
+            }      
+        }
       }
                         // let exit_check: String = String::from("exit");
                         //  if command == exit_check {
@@ -48,7 +68,7 @@ fn main() {
     }
 }
 
-fn find_in_path(potential: &str) -> Option<String> {
+fn find_exec_in_path(potential: &str) -> Option<String> {
     //获取PATH， 失败直接返回None
     let path_exists = env::var("PATH").ok()?; // var 返回Result<String, VarError> , .ok() 可以被Result类调用， .ok()返回的是Option<String>, ? 使得none被立即返回
 
