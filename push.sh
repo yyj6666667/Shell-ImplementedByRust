@@ -2,7 +2,7 @@
 if [ -z "$1" ]; then
     msg="normal update"
 else
-    msg="$1" 
+    msg="$*" 
 fi
 
 git add .
