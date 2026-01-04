@@ -1,5 +1,6 @@
 #[allow(unused_imports)]
 use std::env;
+use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::io::{self, Write};
 
@@ -56,7 +57,12 @@ fn find_in_path(potential: &str) -> Option<String> {
         let path = Path::new(&full_path);
         if path.exists() && path.is_file() {
             // similar to python: os.path.exists(path), 只不过这里先创建了一个Path对象
-            return Some(full_path);
+            if let Ok(metadata) = path.metadata() {
+                if metadata.permissions().mode() & 0o111 != 0 {
+                    //为了匹配fn签名 ->Option<String> 必须加一层封装， 这就是rust严格的地方
+                    return Some(full_path);
+                }
+            }
         }
     }
 
