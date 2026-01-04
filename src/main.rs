@@ -1,4 +1,6 @@
 #[allow(unused_imports)]
+use std::env;
+use std::path::Path;
 use std::io::{self, Write};
 
 fn main() {
@@ -24,7 +26,15 @@ fn main() {
             let arg = &command[5..];
             if builtins.contains(&arg) { 
                 println!("{} is a shell builtin", arg);
-            } else {
+            } else if (find_in_path(arg).is_some())  {
+                // is_some(), is_none, 学到了
+                // 可以用if let 语法写， 但是这里不整复杂了
+                // unwarp() 解包 Option<>
+                let path = find_in_path(arg).unwrap();
+                println!("{} is {}", arg, path);
+            }
+            
+            else {
                 println!("{}: not found", arg);
             }
         }
@@ -35,4 +45,20 @@ fn main() {
                         //    break;
                         //  }
     }
+}
+
+fn find_in_path(potential: &str) -> Option<String> {
+    //获取PATH， 失败直接返回None
+    let path_exists = env::var("PATH").ok()?; // var 返回Result<String, VarError> , .ok() 可以被Result类调用， .ok()返回的是Option<String>, ? 使得none被立即返回
+
+    for dir in path_exists.split(':') {
+        let full_path = format!("{}/{}", dir, potential);
+        let path = Path::new(&full_path);
+        if path.exists() && path.is_file() {
+            // similar to python: os.path.exists(path), 只不过这里先创建了一个Path对象
+            return Some(full_path);
+        }
+    }
+
+    None
 }
