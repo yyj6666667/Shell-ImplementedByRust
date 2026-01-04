@@ -8,7 +8,7 @@
 
     fn main() {
         // TODO: Uncomment the code below to pass the first stage
-        let builtins = ["echo", "exit", "type"]; // 注意这里的元素类型是&str
+        let builtins = ["echo", "exit", "type", "pwd"]; // 注意这里的元素类型是&str
                                                             // 调用contains 传入&&str
 
         loop {
@@ -23,6 +23,9 @@
         match command {
             "exit" => {
                 break;
+            }
+            "pwd" => {
+                println!("{}", env::current_dir().unwrap().display());
             }
             //echo
             _ if command.starts_with("echo ") => {
