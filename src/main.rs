@@ -3,10 +3,10 @@
     use std::os::unix::fs::PermissionsExt;
     use std::os::unix::process::CommandExt;
     use std::path::Path;
-    use std::io::{self, Write};
+    use std::io;
+    use std::io::Write;
     use std::process::Command;
     use std::fs::OpenOptions;
-    use std::io::Write;
 
     fn main() {
         // TODO: Uncomment the code below to pass the first stage
@@ -60,8 +60,6 @@
                     println!("{}", left[1..].join(" "));
                 } else {
                     // > or >>
-                    use std::fs::OpenOptions;
-                    use std::io::Write;
 
                     let content_to_write = format!("{}\n", 
                     left[1..].join(" "));
@@ -153,10 +151,6 @@
                 }
             }
         }
-                            // let exit_check: String = String::from("exit");
-                            //  if command == exit_check {
-                            //    break;
-                            //  }
         }
     }
 
