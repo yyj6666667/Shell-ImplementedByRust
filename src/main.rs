@@ -67,16 +67,16 @@
                     match redirect_choice {
                         // >>
                         true => {
-                            if let Ok(mut fp) = OpenOptions::new().create(true).write(true).append(true).open(target.as_ref().unwrap()) {
-                                let _ = fp.write_all(content_to_write.as_bytes());
+                            if let Ok(mut fd) = OpenOptions::new().create(true).write(true).append(true).open(target.as_ref().unwrap()) {
+                                let _ = fd.write_all(content_to_write.as_bytes());
                             } else {
                                 eprint!("echo: cannot open {} for append", target.unwrap());
                             }
                         }
                         // >
                         false => {
-                            if let Ok(mut fp) = OpenOptions::new().create(true).write(true).truncate(true).open(target.as_mut().unwrap()) {
-                                let _ = fp.write_all(content_to_write.as_bytes());
+                            if let Ok(mut fd) = OpenOptions::new().create(true).write(true).truncate(true).open(target.as_mut().unwrap()) {
+                                let _ = fd.write_all(content_to_write.as_bytes());
                             } else {
                                 eprint!("echo: cannot open {} for overwrite", target.unwrap());
                             }
@@ -124,9 +124,9 @@
                             true => {
                                 if let Ok(output) = Command::new(&path).arg0(cmd).args(args).output() {
                                     let written_path = target.unwrap();
-                                    if let Ok(mut fp) = OpenOptions::new()
+                                    if let Ok(mut fd) = OpenOptions::new()
                                         .create(true).write(true).append(true).open(&written_path) {
-                                            let _ = fp.write_all(&output.stdout);
+                                            let _ = fd.write_all(&output.stdout);
                                     } else {
                                         eprintln!("open {} failed", written_path);
                                     }
@@ -136,11 +136,16 @@
                             false => {
                                 if let Ok(output) = Command::new(&path).arg0(cmd).args(args).output() {
                                     let written_path = target.unwrap();
-                                    if let Ok(mut fp) = OpenOptions::new()
+                                    if let Ok(mut fd) = OpenOptions::new()
                                         .create(true).write(true).append(false).truncate(true).open(&written_path) {
-                                            let _ = fp.write_all(&output.stdout);
+                                            let _ = fd.write_all(&output.stdout);
                                     } else {
                                         eprintln!("open {} failed", written_path);
+                                    }
+
+                                    //debug: 可能第i个参数open err
+                                    if !output.stderr.is_empty() {
+                                        eprint!("{}", String::from_utf8_lossy(&output.stderr));
                                     }
                                 }                      
                             }
