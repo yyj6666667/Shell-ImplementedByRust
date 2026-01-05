@@ -8,6 +8,15 @@
     use std::process::Command;
     use std::fs::OpenOptions;
 
+    #[derive(PartialEq, Clone, Copy, Debug)]
+    enum RedirectKind {
+        None,            //不重定向
+        StdoutOverwrite, // > or 1>
+        StdoutAppend,    // >> or 1>>
+        StderrOverwrite, // 2>
+        StderrAppend,    // 2>>
+    }
+
     fn main() {
         // TODO: Uncomment the code below to pass the first stage
         let builtins = ["echo", "exit", "type", "pwd", "cd"]; // 注意这里的元素类型是&str
@@ -54,8 +63,8 @@
             //echo
             _ if command.starts_with("echo ") => {
                 //refactor with split_redirect
-                let (left, mut target, redirect_choice, is_redirect) = split_redirect(command);
-                if !is_redirect {
+                let (left, mut target, kind) = split_redirect(command);
+                if kind == RedirectKind::None {
                     //正常echo
                     println!("{}", left[1..].join(" "));
                 } else {
@@ -104,24 +113,22 @@
             //extern command
             //maybe an exec or wrong
             _ => {
-                //refactor with split_redirect
-
                 //解构命令, 后面三个分支都会复用
-                let (left, target, redirect_choice, is_redirect) = split_redirect(command);
+                let (left, target, redirectKind) = split_redirect(command);
 
                 if left.is_empty() { continue;}
                 let cmd = left[0].as_str();
                 let args = &left[1..];
                 if let Some(path) = find_exec_in_path(cmd) {
-                    if !is_redirect {
+                    if redirectKind == RedirectKind::None {
                         //外部命令 + 非重定向
                         Command::new(path).arg0(cmd).args(args).status().unwrap();
                     } else {
                         // > or >>
     
-                        match redirect_choice {
+                        match redirectKind {
                             // >>
-                            true => {
+                            RedirectKind::StdoutAppend | RedirectKind::StderrAppend => {
                                 if let Ok(output) = Command::new(&path).arg0(cmd).args(args).output() {
                                     let written_path = target.unwrap();
                                     if let Ok(mut fd) = OpenOptions::new()
@@ -133,7 +140,7 @@
                                 }                      
                             }
                             // >
-                            false => {
+                            RedirectKind::StderrOverwrite | RedirectKind::StdoutOverwrite => {
                                 if let Ok(output) = Command::new(&path).arg0(cmd).args(args).output() {
                                     let written_path = target.unwrap();
                                     if let Ok(mut fd) = OpenOptions::new()
@@ -180,31 +187,41 @@
         None
     }
 /// 第一个bool用来区分append和overwri， 第二个bool用来区分是否是redirect
-    fn split_redirect(input: &str) -> (Vec<String>, Option<String> ,bool, bool) {
-        let mut append_bool = false;
+    fn split_redirect(input: &str) -> (Vec<String>, Option<String> , RedirectKind) {
 
         let normalize_target = |raw : &str| -> String {
             raw.trim().trim_matches('"').trim_matches('\'').to_string()
         };
 
         // 先尝试匹配">>"", pos 是模式匹配时(match, if let , while let), 当场创建的对象
-        match input.rfind("1>>") {
+        // 2>>
+        match input.rfind("2>>") {
             Some(pos) => {
-                append_bool = true;
                 let (left, right) = input.split_at(pos);
                 let target = normalize_target(right[3..].trim());
-                return (tokenize(left), Some(target), append_bool, true);
+                return (tokenize(left), Some(target), RedirectKind::StderrAppend);
+            }
+            None => {
+                //continue
+            }
+        }
+        // 1>>
+        match input.rfind("1>>") {
+            Some(pos) => {
+                let (left, right) = input.split_at(pos);
+                let target = normalize_target(right[3..].trim());
+                return (tokenize(left), Some(target), RedirectKind::StdoutAppend);
             }
             None      => {
                 //继续往下执行
             }       
         }
+        // >>
         match input.rfind(">>") {
             Some(pos) => {
-                append_bool = true;
                 let (left, right) = input.split_at(pos);
                 let target = normalize_target(right[2..].trim());
-                return (tokenize(left), Some(target), append_bool, true);
+                return (tokenize(left), Some(target), RedirectKind::StdoutAppend);
             }
             None      => {
                 //继续往下执行
@@ -212,20 +229,28 @@
         }
 
         // 再尝试匹配">"
-        if let Some(pos) = input.rfind("1>") {
-            append_bool = false;
+        // 2>
+        if let Some(pos) = input.rfind("2>") {
             let (left, right) = input.split_at(pos);
             let target = normalize_target(right[2..].trim());
-            return (tokenize(left), Some(target), append_bool, true);
+            return (tokenize(left), Some(target), RedirectKind::StderrOverwrite);
         } 
 
-        if let Some(pos) = input.rfind(">") {
-            append_bool = false;
+        // 1>
+        if let Some(pos) = input.rfind("1>") { 
+            let (left, right) = input.split_at(pos);
+            let target = normalize_target(right[2..].trim());
+            return (tokenize(left), Some(target), RedirectKind::StdoutOverwrite);
+        } 
+
+        // >
+        if let Some(pos) = input.rfind(">") { 
             let (left, right) = input.split_at(pos);
             let target = normalize_target(right[1..].trim());
-            (tokenize(left), Some(target), append_bool, true)
+            (tokenize(left), Some(target), RedirectKind::StdoutOverwrite)
         } else {
-            return (tokenize(input), None, false, false);
+        // non-redirect
+            return (tokenize(input), None, RedirectKind::None);
         }
     }
 

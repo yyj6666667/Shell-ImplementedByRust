@@ -1,5 +1,9 @@
 # debug log
-
+---
+1.6
+* split_redirect 两个控制信息改成返回枚举（注意添加#[derive()信息]）, echo 分支单独加非常麻烦
+---
+1.5 晚
 * 出现了很多value used\borrowed after move, 加深对所有权的理解
 * 注意， 参数传递进入函数， 除了所有权转移， 作用域也转移了， 函数返回值这是将所有权传出给caller
 * .clone(), 在heap上又复制了一份数据
@@ -12,10 +16,13 @@
       * cat file1 file2 , 第一个读到了，stdout成功写入.md, 第二个失败了， stderr没有成功打印到终端
    ![alt text](images/image.png)
 * 这种在原生shell里面跑小shell还可以到处访问增删查改的感觉哈哈哈哈
----
+
+1.5 傍晚
 * 继续重构， 添加quote功能
 * rfind会造成echo "xxx>1xxx"  的风险
+
 1.5
+
 * refactoring branch "extern command" and "echo", to add redirection func, ahhhh!
    * add utils: split_redirect(), 先判断有无>>, 再判断有无>, 返回tuple
 * 目前extern command分支不太好看， 先跑起来再说吧， output应该写在branch ">" , ">>"最前面
