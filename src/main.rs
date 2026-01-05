@@ -178,7 +178,18 @@
     fn split_redirect(input: &str) -> (Vec<&str>, Option<&str> ,bool, bool) {
         let mut append_bool = false;
 
-        // 先尝试匹配>>, pos 是模式匹配时(match, if let , while let), 当场创建的对象
+        // 先尝试匹配">>"", pos 是模式匹配时(match, if let , while let), 当场创建的对象
+        match input.rfind("1>>") {
+            Some(pos) => {
+                append_bool = true;
+                let (left, right) = input.split_at(pos);
+                let target = right[3..].trim();
+                return (left.split_whitespace().collect(), Some(target), append_bool, true);
+            }
+            None      => {
+                //继续往下执行
+            }       
+        }
         match input.rfind(">>") {
             Some(pos) => {
                 append_bool = true;
@@ -191,7 +202,14 @@
             }
         }
 
-        // 再尝试匹配>
+        // 再尝试匹配">"
+        if let Some(pos) = input.rfind("1>") {
+            append_bool = false;
+            let (left, right) = input.split_at(pos);
+            let target = right[2..].trim();
+            return (left.split_whitespace().collect(), Some(target), append_bool, true);
+        } 
+
         if let Some(pos) = input.rfind(">") {
             append_bool = false;
             let (left, right) = input.split_at(pos);
@@ -200,8 +218,4 @@
         } else {
             return (input.split_whitespace().collect(), None, false, false);
         }
-                                        //某等价写法
-                                        //if let Some(pos) = input.rfind(">>") {
-                                        //    append_bool = true;
-                                        //}
     }
