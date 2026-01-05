@@ -44,13 +44,45 @@
                     target.to_string()
                 };
 
+                // 啊， 好吧， 寻址., .. 是set_current_dir 本来就有的特性
                 if env::set_current_dir(&path).is_err() {
                     println!("cd: {}: No such file or directory", &path);
                 }
             }
             //echo
             _ if command.starts_with("echo ") => {
-                println!("{}", &command[5..]);
+                //refactor with split_redirect
+                let (left, target, redirect_choice, is_redirect) = split_redirect(command);
+                if !is_redirect {
+                    //正常echo
+                    println!("{}", left[1..].join(" "));
+                } else {
+                    // > or >>
+                    use std::fs::OpenOptions;
+                    use std::io::Write;
+
+                    let content_to_write = format!("{}\n", 
+                    left[1..].join(" "));
+
+                    match redirect_choice {
+                        // >>
+                        true => {
+                            if let Ok(mut fp) = OpenOptions::new().create(true).write(true).append(true).open(target.unwrap()) {
+                                let _ = fp.write_all(content_to_write.as_bytes());
+                            } else {
+                                eprint!("echo: cannot open {} for append", target.unwrap());
+                            }
+                        }
+                        // >
+                        false => {
+                            if let Ok(mut fp) = OpenOptions::new().create(true).write(true).truncate(true).open(target.unwrap()) {
+                                let _ = fp.write_all(content_to_write.as_bytes());
+                            } else {
+                                eprint!("echo: cannot open {} for overwrite", target.unwrap());
+                            }
+                        }
+                    }
+                }
             }
             //type
             _ if command.starts_with("type") && command.len() > 4 => {
@@ -111,4 +143,35 @@
         }
 
         None
+    }
+/// 第一个bool用来区分append和overwri， 第二个bool用来区分是否是redirect
+    fn split_redirect(input: &str) -> (Vec<&str>, Option<&str> ,bool, bool) {
+        let mut append_bool = false;
+
+        // 先尝试匹配>>, pos 是模式匹配时(match, if let , while let), 当场创建的对象
+        match input.rfind(">>") {
+            Some(pos) => {
+                append_bool = true;
+                let (left, right) = input.split_at(pos);
+                let target = right[2..].trim();
+                return (left.split_whitespace().collect(), Some(target), append_bool, true);
+            }
+            None      => {
+                //继续往下执行
+            }
+        }
+
+        // 再尝试匹配>
+        if let Some(pos) = input.rfind(">") {
+            append_bool = false;
+            let (left, right) = input.split_at(pos);
+            let target = right[1..].trim();
+            (left.split_whitespace().collect(), Some(target), append_bool, true)
+        } else {
+            return (input.split_whitespace().collect(), None, false, false);
+        }
+                                        //某等价写法
+                                        //if let Some(pos) = input.rfind(">>") {
+                                        //    append_bool = true;
+                                        //}
     }
