@@ -5,6 +5,8 @@
     use std::path::Path;
     use std::io::{self, Write};
     use std::process::Command;
+    use std::fs::OpenOptions;
+    use std::io::Write;
 
     fn main() {
         // TODO: Uncomment the code below to pass the first stage
@@ -28,7 +30,7 @@
                 println!("{}", env::current_dir().unwrap().display());
             }
             //cd
-            _ if command.starts_with("cd ") => {
+            _ if command.starts_with("cd") => {
                 let target = if command.len() > 3 {
                     &command[3..]
                 } else {
@@ -101,20 +103,54 @@
                     println!("{}: not found", arg);
                 }
             }
-            //not built-in command
+            //extern command
             //maybe an exec or wrong
             _ => {
-                //check if is an exec
-                // 唉， 这里开销有点大
-                let parts: Vec<&str> = command.split_whitespace().collect();
-                if parts.is_empty() { continue; }
+                //refactor with split_redirect
 
-                let args = &parts[1..];
-                if let Some(found) = find_exec_in_path(&parts[0]) {
-                    Command::new(&found).arg0(parts[0]).args(args).status().unwrap();
+                //解构命令, 后面三个分支都会复用
+                let (left, target, redirect_choice, is_redirect) = split_redirect(command);
+
+                if left.is_empty() { continue;}
+                let cmd = left[0];
+                let args = &left[1..];
+                if let Some(path) = find_exec_in_path(cmd) {
+                    if !is_redirect {
+                        //外部命令 + 非重定向
+                        Command::new(path).arg0(cmd).args(args).status().unwrap();
+                    } else {
+                        // > or >>
+    
+                        match redirect_choice {
+                            // >>
+                            true => {
+                                if let Ok(output) = Command::new(&path).arg0(cmd).args(args).output() {
+                                    let written_path = target.unwrap();
+                                    if let Ok(mut fp) = OpenOptions::new()
+                                        .create(true).write(true).append(true).open(written_path) {
+                                            let _ = fp.write_all(&output.stdout);
+                                    } else {
+                                        eprintln!("open {} failed", written_path);
+                                    }
+                                }                      
+                            }
+                            // >
+                            false => {
+                                if let Ok(output) = Command::new(&path).arg0(cmd).args(args).output() {
+                                    let written_path = target.unwrap();
+                                    if let Ok(mut fp) = OpenOptions::new()
+                                        .create(true).write(true).append(false).truncate(true).open(written_path) {
+                                            let _ = fp.write_all(&output.stdout);
+                                    } else {
+                                        eprintln!("open {} failed", written_path);
+                                    }
+                                }                      
+                            }
+                        }
+                    }           
                 } else {
                     println!("{}: command not found", command);
-                }      
+                }
             }
         }
                             // let exit_check: String = String::from("exit");

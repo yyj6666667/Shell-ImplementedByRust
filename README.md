@@ -1,4 +1,17 @@
+# debug log
+---
+1.5
+* refactoring branch "extern command" and "echo", to add redirection func, ahhhh!
+   * add utils: split_redirect(), 先判断有无>>, 再判断有无>, 返回tuple
+* 目前extern command分支不太好看， 先跑起来再说吧， output应该写在branch ">" , ">>"最前面
+* 原来的一版更离谱， find_exec_in_path 在 三个分支里面写了三遍
 
+* after refactoring, direct enter cause panic
+* 其实现在有问题， cd and type, what if user inputs cdxxxx or typexxxx, it stills enter cd or type branch,只是测试用例没有覆盖这里
+
+
+
+---
 This is a starting point for Rust solutions to the
 ["Build Your Own Shell" Challenge](https://app.codecrafters.io/courses/shell/overview).
 
@@ -7,7 +20,7 @@ interpreting shell commands, running external programs and builtin commands like
 cd, pwd, echo and more. Along the way, you'll learn about shell command parsing,
 REPLs, builtin commands, and more.
 
-**Note**: If you're viewing this repo on GitHub, head over to
+**Note**: If you're viewing this repo on GitHub, head over to0
 [codecrafters.io](https://codecrafters.io) to try the challenge.
 
 # Passing the first stage
