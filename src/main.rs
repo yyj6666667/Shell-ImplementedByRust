@@ -54,7 +54,7 @@
             //echo
             _ if command.starts_with("echo ") => {
                 //refactor with split_redirect
-                let (left, target, redirect_choice, is_redirect) = split_redirect(command);
+                let (left, mut target, redirect_choice, is_redirect) = split_redirect(command);
                 if !is_redirect {
                     //正常echo
                     println!("{}", left[1..].join(" "));
@@ -67,7 +67,7 @@
                     match redirect_choice {
                         // >>
                         true => {
-                            if let Ok(mut fp) = OpenOptions::new().create(true).write(true).append(true).open(target.unwrap()) {
+                            if let Ok(mut fp) = OpenOptions::new().create(true).write(true).append(true).open(target.as_ref().unwrap()) {
                                 let _ = fp.write_all(content_to_write.as_bytes());
                             } else {
                                 eprint!("echo: cannot open {} for append", target.unwrap());
@@ -75,7 +75,7 @@
                         }
                         // >
                         false => {
-                            if let Ok(mut fp) = OpenOptions::new().create(true).write(true).truncate(true).open(target.unwrap()) {
+                            if let Ok(mut fp) = OpenOptions::new().create(true).write(true).truncate(true).open(target.as_mut().unwrap()) {
                                 let _ = fp.write_all(content_to_write.as_bytes());
                             } else {
                                 eprint!("echo: cannot open {} for overwrite", target.unwrap());
@@ -110,7 +110,7 @@
                 let (left, target, redirect_choice, is_redirect) = split_redirect(command);
 
                 if left.is_empty() { continue;}
-                let cmd = left[0];
+                let cmd = left[0].as_str();
                 let args = &left[1..];
                 if let Some(path) = find_exec_in_path(cmd) {
                     if !is_redirect {
@@ -125,7 +125,7 @@
                                 if let Ok(output) = Command::new(&path).arg0(cmd).args(args).output() {
                                     let written_path = target.unwrap();
                                     if let Ok(mut fp) = OpenOptions::new()
-                                        .create(true).write(true).append(true).open(written_path) {
+                                        .create(true).write(true).append(true).open(&written_path) {
                                             let _ = fp.write_all(&output.stdout);
                                     } else {
                                         eprintln!("open {} failed", written_path);
@@ -137,7 +137,7 @@
                                 if let Ok(output) = Command::new(&path).arg0(cmd).args(args).output() {
                                     let written_path = target.unwrap();
                                     if let Ok(mut fp) = OpenOptions::new()
-                                        .create(true).write(true).append(false).truncate(true).open(written_path) {
+                                        .create(true).write(true).append(false).truncate(true).open(&written_path) {
                                             let _ = fp.write_all(&output.stdout);
                                     } else {
                                         eprintln!("open {} failed", written_path);
@@ -179,7 +179,7 @@
         let mut append_bool = false;
 
         let normalize_target = |raw : &str| -> String {
-            raw.trim().trim_matches('"').to_string()
+            raw.trim().trim_matches('"').trim_matches('\'').to_string()
         };
 
         // 先尝试匹配">>"", pos 是模式匹配时(match, if let , while let), 当场创建的对象
@@ -220,7 +220,7 @@
             let target = normalize_target(right[1..].trim());
             (tokenize(left), Some(target), append_bool, true)
         } else {
-            return (input.split_whitespace().collect(), None, false, false);
+            return (tokenize(input), None, false, false);
         }
     }
 
