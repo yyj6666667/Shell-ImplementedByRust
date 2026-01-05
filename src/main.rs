@@ -175,16 +175,20 @@
         None
     }
 /// 第一个bool用来区分append和overwri， 第二个bool用来区分是否是redirect
-    fn split_redirect(input: &str) -> (Vec<&str>, Option<&str> ,bool, bool) {
+    fn split_redirect(input: &str) -> (Vec<String>, Option<String> ,bool, bool) {
         let mut append_bool = false;
+
+        let normalize_target = |raw : &str| -> String {
+            raw.trim().trim_matches('"').to_string()
+        };
 
         // 先尝试匹配">>"", pos 是模式匹配时(match, if let , while let), 当场创建的对象
         match input.rfind("1>>") {
             Some(pos) => {
                 append_bool = true;
                 let (left, right) = input.split_at(pos);
-                let target = right[3..].trim();
-                return (left.split_whitespace().collect(), Some(target), append_bool, true);
+                let target = normalize_target(right[3..].trim());
+                return (tokenize(left), Some(target), append_bool, true);
             }
             None      => {
                 //继续往下执行
@@ -194,8 +198,8 @@
             Some(pos) => {
                 append_bool = true;
                 let (left, right) = input.split_at(pos);
-                let target = right[2..].trim();
-                return (left.split_whitespace().collect(), Some(target), append_bool, true);
+                let target = normalize_target(right[2..].trim());
+                return (tokenize(left), Some(target), append_bool, true);
             }
             None      => {
                 //继续往下执行
@@ -206,16 +210,46 @@
         if let Some(pos) = input.rfind("1>") {
             append_bool = false;
             let (left, right) = input.split_at(pos);
-            let target = right[2..].trim();
-            return (left.split_whitespace().collect(), Some(target), append_bool, true);
+            let target = normalize_target(right[2..].trim());
+            return (tokenize(left), Some(target), append_bool, true);
         } 
 
         if let Some(pos) = input.rfind(">") {
             append_bool = false;
             let (left, right) = input.split_at(pos);
-            let target = right[1..].trim();
-            (left.split_whitespace().collect(), Some(target), append_bool, true)
+            let target = normalize_target(right[1..].trim());
+            (tokenize(left), Some(target), append_bool, true)
         } else {
             return (input.split_whitespace().collect(), None, false, false);
         }
+    }
+
+    fn tokenize(input: &str) -> Vec<String> {
+        let mut args = Vec::new();
+        let mut buf = String::new();
+        let mut in_quotes = false;
+
+        for char in input.chars() {
+            match char {
+                //reverse state
+                '"' | '\'' => {
+                    in_quotes = !in_quotes;
+                }
+                //碰到空格 而且 不在引用内， 触发添加args的条件
+                c if c.is_whitespace() && in_quotes == false => {
+                    args.push(buf.clone()); // 哈， 所有权
+                    buf.clear();
+                }
+                //in normal case, add char to each arg, temperally stored in buf
+                _ => {
+                    buf.push(char);
+                }
+            }
+        }
+        //add last arg manually
+        if !buf.is_empty() {
+            args.push(buf.clone());
+        }        
+
+        args
     }

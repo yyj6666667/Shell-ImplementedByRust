@@ -1,5 +1,9 @@
 # debug log
+
+* 这种在原生shell里面跑小shell还可以到处访问增删查改的感觉哈哈哈哈
 ---
+* 继续重构， 添加quote功能
+* rfind会造成echo "xxx>1xxx"  的风险
 1.5
 * refactoring branch "extern command" and "echo", to add redirection func, ahhhh!
    * add utils: split_redirect(), 先判断有无>>, 再判断有无>, 返回tuple
