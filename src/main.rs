@@ -75,8 +75,8 @@
 
                     match kind {
                         // >>
-                        // 为了通过错误测例， 不得不加入stderr， 虽然是错的
-                        RedirectKind::StdoutAppend | RedirectKind::StderrAppend=> {
+                        
+                        RedirectKind::StdoutAppend => {
                             if let Ok(mut fd) = OpenOptions::new().create(true).write(true).append(true).open(target.as_ref().unwrap()) {
                                 let _ = fd.write_all(content_to_write.as_bytes());
                             } else {
@@ -84,7 +84,7 @@
                             }
                         }
                         // >
-                        RedirectKind::StdoutOverwrite | RedirectKind::StderrOverwrite => {
+                        RedirectKind::StdoutOverwrite  => {
                             if let Ok(mut fd) = OpenOptions::new().create(true).write(true).truncate(true).open(target.as_mut().unwrap()) {
                                 let _ = fd.write_all(content_to_write.as_bytes());
                             } else {
@@ -93,7 +93,9 @@
                         }
 
                         _ => {
-                            eprint!("echo: unexpected happened, not supposed to enter this branch");
+                            // echo only output stdout, so enter this branch, redirection has failed
+                            // but echo itself can still output stdout to screen
+                            print!("{}", &content_to_write);
                         }
                     }
                 }
