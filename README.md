@@ -1,11 +1,15 @@
 # debug log
 ---
+这是一个mini linux shell， 支持调用内置命令echo, exit, type, pwd, cd, 支持寻找并调用系统环境变量中的可执行文件(外部命令)， 部分支持quote功能， 完整支持重定向
+
 1.6
 * 以这个语句为例， 添置功能，file1.txt 正常stdout， 输出到终端， nonexistent 产生stderr， 重定向写入rat.md
    * cat file1.txt nonexistent 2> /tmp/bee/rat.md
 
 * split_redirect 两个控制信息改成返回枚举（注意添加#[derive()信息]）, echo 分支单独加非常麻烦
 * if let 匹配值 = 源变量 {语句块1} else {语句块2}， if let 可以看成是只有两个分支的match 语法糖
+* 通过了第一点的mix-cases, 代码臃肿了一些
+* clear 会导致程序崩溃， 可以研究一下
 ---
 1.5 晚
 * 出现了很多value used\borrowed after move, 加深对所有权的理解

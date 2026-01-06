@@ -188,13 +188,14 @@
                                         }
                                 } else {
                                     eprintln!("open {} failed", written_path);
-                                
-                                //debug: 可能第i个参数open err
-                                if !output.stderr.is_empty() {
-                                    eprint!("{}", String::from_utf8_lossy(&output.stderr));
-                                }
-                            }                      
-                        }
+                                    
+                                    //虽然target可能打开失败， output已经成功读取
+                                    //debug: 可能第i个参数open err
+                                    if !output.stderr.is_empty() {
+                                        eprint!("{}", String::from_utf8_lossy(&output.stderr));
+                                    }
+                                }                      
+                            }
                     }
                     }           
                 } else {
