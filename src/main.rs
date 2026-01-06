@@ -135,7 +135,7 @@
                         RedirectKind::None => {
                             Command::new(path).arg0(cmd).args(args).status().unwrap();
                         }
-                        // >>
+                        // >> and 2>>
                         RedirectKind::StdoutAppend | RedirectKind::StderrAppend => {
                             if let Ok(output) = Command::new(&path).arg0(cmd).args(args).output() {
                                 let written_path = target.unwrap();
@@ -148,15 +148,20 @@
                                             RedirectKind::StderrAppend => Some(&output.stderr),
                                             _ => None,
                                         };
+                                        //执行潜在的写入
                                         if let Some(buf) = write_ptr{
                                             let _ = fd.write_all(buf);
                                         } 
+                                        // handle 2>> special case, when stderr is empty, has stdout
+                                        if !output.stdout.is_empty() {
+                                            let _ =  io::stdout().write_all(&output.stdout);
+                                        }
                                 } else {
                                     eprintln!("open {} failed", written_path);
                                 }
                             }                      
                         }
-                        // >
+                        // > and 2>                                  
                         RedirectKind::StderrOverwrite | RedirectKind::StdoutOverwrite => {
                             if let Ok(output) = Command::new(&path).arg0(cmd).args(args).output() {
                                 let written_path = target.unwrap();
@@ -168,6 +173,10 @@
                                             }
                                             RedirectKind::StderrOverwrite => {
                                                 let _ = fd.write_all(&output.stderr);
+                                                //if not expected stderr, then stdout normally handled by command
+                                                if !output.stdout.is_empty() {
+                                                    let _ =  io::stdout().write_all(&output.stdout);
+                                                }
                                             }
                                             _ => {}
                                         }

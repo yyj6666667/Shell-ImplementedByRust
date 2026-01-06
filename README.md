@@ -1,6 +1,9 @@
 # debug log
 ---
 1.6
+* 以这个语句为例， 添置功能，file1.txt 正常stdout， 输出到终端， nonexistent 产生stderr， 重定向写入rat.md
+   * cat file1.txt nonexistent 2> /tmp/bee/rat.md
+
 * split_redirect 两个控制信息改成返回枚举（注意添加#[derive()信息]）, echo 分支单独加非常麻烦
 * if let 匹配值 = 源变量 {语句块1} else {语句块2}， if let 可以看成是只有两个分支的match 语法糖
 ---
