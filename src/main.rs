@@ -153,8 +153,11 @@
                                             let _ = fd.write_all(buf);
                                         } 
                                         // handle 2>> special case, when stderr is empty, has stdout
-                                        if !output.stdout.is_empty() {
+                                        if !output.stdout.is_empty() && redirectKind == RedirectKind::StderrAppend{
                                             let _ =  io::stdout().write_all(&output.stdout);
+                                        }
+                                        if !output.stderr.is_empty() && redirectKind == RedirectKind::StdoutAppend{
+                                            let _ = io::stderr().write_all(&output.stderr);
                                         }
                                 } else {
                                     eprintln!("open {} failed", written_path);
@@ -170,6 +173,9 @@
                                         match redirectKind {
                                             RedirectKind::StdoutOverwrite => {
                                                 let _ = fd.write_all(&output.stdout);
+                                                if !output.stderr.is_empty() {
+                                                    let _ = io::stdout().write_all(&output.stderr);
+                                                }
                                             }
                                             RedirectKind::StderrOverwrite => {
                                                 let _ = fd.write_all(&output.stderr);
