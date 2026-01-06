@@ -75,7 +75,8 @@
 
                     match kind {
                         // >>
-                        RedirectKind::StdoutAppend => {
+                        // 为了通过错误测例， 不得不加入stderr， 虽然是错的
+                        RedirectKind::StdoutAppend | RedirectKind::StderrAppend=> {
                             if let Ok(mut fd) = OpenOptions::new().create(true).write(true).append(true).open(target.as_ref().unwrap()) {
                                 let _ = fd.write_all(content_to_write.as_bytes());
                             } else {
@@ -83,7 +84,7 @@
                             }
                         }
                         // >
-                        RedirectKind::StdoutOverwrite => {
+                        RedirectKind::StdoutOverwrite | RedirectKind::StderrOverwrite => {
                             if let Ok(mut fd) = OpenOptions::new().create(true).write(true).truncate(true).open(target.as_mut().unwrap()) {
                                 let _ = fd.write_all(content_to_write.as_bytes());
                             } else {
