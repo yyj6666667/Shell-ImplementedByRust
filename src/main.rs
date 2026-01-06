@@ -96,6 +96,8 @@
                             // echo only output stdout, so enter this branch, redirection has failed
                             // but echo itself can still output stdout to screen
                             print!("{}", &content_to_write);
+                            // echo should still create the target file
+                            let _ = OpenOptions::new().create(true).write(true).open(target.as_ref().unwrap()); 
                         }
                     }
                 }
