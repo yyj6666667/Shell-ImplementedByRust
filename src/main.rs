@@ -73,9 +73,9 @@
                     let content_to_write = format!("{}\n", 
                     left[1..].join(" "));
 
-                    match redirect_choice {
+                    match kind {
                         // >>
-                        true => {
+                        RedirectKind::StdoutAppend => {
                             if let Ok(mut fd) = OpenOptions::new().create(true).write(true).append(true).open(target.as_ref().unwrap()) {
                                 let _ = fd.write_all(content_to_write.as_bytes());
                             } else {
@@ -83,12 +83,16 @@
                             }
                         }
                         // >
-                        false => {
+                        RedirectKind::StdoutOverwrite => {
                             if let Ok(mut fd) = OpenOptions::new().create(true).write(true).truncate(true).open(target.as_mut().unwrap()) {
                                 let _ = fd.write_all(content_to_write.as_bytes());
                             } else {
                                 eprint!("echo: cannot open {} for overwrite", target.unwrap());
                             }
+                        }
+
+                        _ => {
+                            eprint!("echo: unexpected happened, not supposed to enter this branch");
                         }
                     }
                 }
@@ -120,43 +124,58 @@
                 let cmd = left[0].as_str();
                 let args = &left[1..];
                 if let Some(path) = find_exec_in_path(cmd) {
-                    if redirectKind == RedirectKind::None {
-                        //外部命令 + 非重定向
-                        Command::new(path).arg0(cmd).args(args).status().unwrap();
-                    } else {
-                        // > or >>
-    
-                        match redirectKind {
-                            // >>
-                            RedirectKind::StdoutAppend | RedirectKind::StderrAppend => {
-                                if let Ok(output) = Command::new(&path).arg0(cmd).args(args).output() {
-                                    let written_path = target.unwrap();
-                                    if let Ok(mut fd) = OpenOptions::new()
-                                        .create(true).write(true).append(true).open(&written_path) {
-                                            let _ = fd.write_all(&output.stdout);
-                                    } else {
-                                        eprintln!("open {} failed", written_path);
-                                    }
-                                }                      
-                            }
-                            // >
-                            RedirectKind::StderrOverwrite | RedirectKind::StdoutOverwrite => {
-                                if let Ok(output) = Command::new(&path).arg0(cmd).args(args).output() {
-                                    let written_path = target.unwrap();
-                                    if let Ok(mut fd) = OpenOptions::new()
-                                        .create(true).write(true).append(false).truncate(true).open(&written_path) {
-                                            let _ = fd.write_all(&output.stdout);
-                                    } else {
-                                        eprintln!("open {} failed", written_path);
-                                    }
-
-                                    //debug: 可能第i个参数open err
-                                    if !output.stderr.is_empty() {
-                                        eprint!("{}", String::from_utf8_lossy(&output.stderr));
-                                    }
-                                }                      
-                            }
+                    
+                    match redirectKind {
+                        // none
+                        RedirectKind::None => {
+                            Command::new(path).arg0(cmd).args(args).status().unwrap();
                         }
+                        // >>
+                        RedirectKind::StdoutAppend | RedirectKind::StderrAppend => {
+                            if let Ok(output) = Command::new(&path).arg0(cmd).args(args).output() {
+                                let written_path = target.unwrap();
+                                if let Ok(mut fd) = OpenOptions::new()
+                                    .create(true).write(true).append(true).open(&written_path) {
+                                        //给你一种ugly的写法, 对比下面更好的写法
+                                        //let _ = fd.write_all(&output.stdout);
+                                        let write_ptr = match redirectKind {
+                                            RedirectKind::StdoutAppend => Some(&output.stdout),
+                                            RedirectKind::StderrAppend => Some(&output.stderr),
+                                            _ => None,
+                                        };
+                                        if let Some(buf) = write_ptr{
+                                            let _ = fd.write_all(buf);
+                                        } 
+                                } else {
+                                    eprintln!("open {} failed", written_path);
+                                }
+                            }                      
+                        }
+                        // >
+                        RedirectKind::StderrOverwrite | RedirectKind::StdoutOverwrite => {
+                            if let Ok(output) = Command::new(&path).arg0(cmd).args(args).output() {
+                                let written_path = target.unwrap();
+                                if let Ok(mut fd) = OpenOptions::new()
+                                    .create(true).write(true).append(false).truncate(true).open(&written_path) {
+                                        match redirectKind {
+                                            RedirectKind::StdoutOverwrite => {
+                                                let _ = fd.write_all(&output.stdout);
+                                            }
+                                            RedirectKind::StderrOverwrite => {
+                                                let _ = fd.write_all(&output.stderr);
+                                            }
+                                            _ => {}
+                                        }
+                                } else {
+                                    eprintln!("open {} failed", written_path);
+                                
+                                //debug: 可能第i个参数open err
+                                if !output.stderr.is_empty() {
+                                    eprint!("{}", String::from_utf8_lossy(&output.stderr));
+                                }
+                            }                      
+                        }
+                    }
                     }           
                 } else {
                     println!("{}: command not found", command);
